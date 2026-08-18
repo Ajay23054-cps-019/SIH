@@ -20,7 +20,7 @@ def infor():
     return processes.information(["code"])
 
 @app.get("/history")
-def history(limit: int = Query(60, ge=1, le=1000)):
+def history(limit: int = Query(30, ge=1, le=1000)):
     return JSONResponse(database.get_latest(limit))
 
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")

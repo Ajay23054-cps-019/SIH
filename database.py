@@ -2,7 +2,6 @@ import sqlite3
 from datetime import datetime
 import threading
 import json
-import os
 
 
 _db_path = "system_metrics.db"
@@ -10,7 +9,9 @@ _log_path = "metrics_log.json"
 _lock = threading.Lock()
 _max_rows = 500
 _cache = []
-_max_cache = 500
+_max_cache = 30
+_write_batch = []
+_max_batch = 5
 
 
 def init_db():
@@ -27,40 +28,59 @@ def init_db():
                 bytes_received REAL NOT NULL
             )
         """)
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
         conn.commit()
 
 
 def insert_metrics(cpu, ram_used, ram_total, ram_percent, bytes_sent, bytes_received):
-    row = {
-        "timestamp": datetime.utcnow().isoformat(),
-        "cpu": cpu,
-        "ram_used": ram_used,
-        "ram_total": ram_total,
-        "ram_percent": ram_percent,
-        "bytes_sent": bytes_sent,
-        "bytes_received": bytes_received,
-    }
+    row = (
+        datetime.utcnow().isoformat(),
+        cpu,
+        ram_used,
+        ram_total,
+        ram_percent,
+        bytes_sent,
+        bytes_received,
+    )
 
     with _lock:
-        with sqlite3.connect(_db_path) as conn:
-            conn.execute(
-                "INSERT INTO metrics (timestamp, cpu, ram_used, ram_total, ram_percent, bytes_sent, bytes_received) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (row["timestamp"], cpu, ram_used, ram_total, ram_percent, bytes_sent, bytes_received),
-            )
-            conn.commit()
-
         _cache.append(row)
         if len(_cache) > _max_cache:
             del _cache[0 : len(_cache) - _max_cache]
 
+        _write_batch.append(row)
+        if len(_write_batch) < _max_batch:
+            return
+
+        batch = _write_batch[:]
+        _write_batch.clear()
+
+    with sqlite3.connect(_db_path) as conn:
+        conn.executemany(
+            "INSERT INTO metrics (timestamp, cpu, ram_used, ram_total, ram_percent, bytes_sent, bytes_received) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            batch,
+        )
+        conn.commit()
+
     _maybe_cleanup()
 
 
-def get_latest(limit=60):
+def get_latest(limit=30):
     with _lock:
         if _cache:
-            rows = _cache[-limit:]
-            return list(rows)
+            return [
+                {
+                    "timestamp": r[0],
+                    "cpu": r[1],
+                    "ram_used": r[2],
+                    "ram_total": r[3],
+                    "ram_percent": r[4],
+                    "bytes_sent": r[5],
+                    "bytes_received": r[6],
+                }
+                for r in _cache[-limit:]
+            ]
 
         with sqlite3.connect(_db_path) as conn:
             conn.row_factory = sqlite3.Row
@@ -86,22 +106,18 @@ def _maybe_cleanup():
     if not rows:
         return
 
-    logs = []
-    for row in rows:
-        logs.append({
-            "timestamp": row[1],
-            "cpu": row[2],
-            "ram_used": row[3],
-            "ram_total": row[4],
-            "ram_percent": row[5],
-            "bytes_sent": row[6],
-            "bytes_received": row[7],
-        })
-
-    if logs:
-        with open(_log_path, "a") as f:
-            for entry in logs:
-                f.write(json.dumps(entry) + "\n")
+    with open(_log_path, "a") as f:
+        for row in rows:
+            entry = {
+                "timestamp": row[1],
+                "cpu": row[2],
+                "ram_used": row[3],
+                "ram_total": row[4],
+                "ram_percent": row[5],
+                "bytes_sent": row[6],
+                "bytes_received": row[7],
+            }
+            f.write(json.dumps(entry) + "\n")
 
     ids = [str(row[0]) for row in rows]
     with sqlite3.connect(_db_path) as conn:
