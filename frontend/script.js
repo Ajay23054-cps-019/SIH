@@ -42,7 +42,9 @@ function formatBytes(bytes) {
 
 function formatTime(iso) {
     const d = new Date(iso);
-    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    return `${date} ${time}`;
 }
 
 function getProcessStatus(status) {
