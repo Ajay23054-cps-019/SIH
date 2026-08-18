@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Monitor Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="dashboard">
+        <header class="header">
+            <h1>System Monitor Dashboard</h1>
+            <div class="status-indicator" id="statusIndicator">
+                <span class="status-dot"></span>
+                <span class="status-text">Connected</span>
+            </div>
+        </header>
+
+        <div class="controls">
+            <button id="refreshBtn" class="btn btn-primary">Refresh Now</button>
+            <select id="processFilter" class="filter-select">
+                <option value="code">VS Code</option>
+                <option value="chrome">Chrome</option>
+                <option value="firefox">Firefox</option>
+                <option value="slack">Slack</option>
+                <option value="discord">Discord</option>
+                <option value="all">All Processes</option>
+            </select>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h3>CPU Usage</h3>
+                <div class="chart-container">
+                    <canvas id="cpuChart"></canvas>
+                </div>
+                <div class="chart-value">
+                    <span id="cpuPercentage">0</span><span>%</span>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <h3>RAM Usage</h3>
+                <div class="chart-container">
+                    <canvas id="ramChart"></canvas>
+                </div>
+                <div class="chart-value">
+                    <span id="ramPercentage">0</span><span>%</span>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <h3>Network I/O</h3>
+                <div class="chart-container">
+                    <canvas id="networkChart"></canvas>
+                </div>
+                <div class="network-summary">
+                    <span>Uploaded: <b id="bytesSent">0</b></span>
+                    <span>Downloaded: <b id="bytesReceived">0</b></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="processes-section">
+            <div class="section-header">
+                <h2>Monitored Processes</h2>
+                <span id="processCount" class="process-count">0 running</span>
+            </div>
+            <div class="table-container">
+                <table class="processes-table">
+                    <thead>
+                        <tr>
+                            <th>PID</th>
+                            <th>Name</th>
+                            <th>CPU %</th>
+                            <th>Memory %</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="processesBody">
+                        <tr>
+                            <td colspan="5" class="empty-state">No processes found</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p id="lastUpdated">Last updated: Never</p>
+            <p class="auto-refresh">Auto-refresh: <span id="refreshInterval">5s</span></p>
+        </div>
+    </div>
+
+    <div id="errorModal" class="modal">
+        <div class="modal-content">
+            <h3>Connection Error</h3>
+            <p id="errorMessage">Unable to connect to the server.</p>
+            <button id="closeModal" class="btn btn-primary">Close</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
