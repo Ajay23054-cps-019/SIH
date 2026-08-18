@@ -9,6 +9,8 @@ _db_path = "system_metrics.db"
 _log_path = "metrics_log.json"
 _lock = threading.Lock()
 _max_rows = 500
+_cache = []
+_max_cache = 500
 
 
 def init_db():
@@ -29,26 +31,44 @@ def init_db():
 
 
 def insert_metrics(cpu, ram_used, ram_total, ram_percent, bytes_sent, bytes_received):
+    row = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "cpu": cpu,
+        "ram_used": ram_used,
+        "ram_total": ram_total,
+        "ram_percent": ram_percent,
+        "bytes_sent": bytes_sent,
+        "bytes_received": bytes_received,
+    }
+
     with _lock:
         with sqlite3.connect(_db_path) as conn:
             conn.execute(
                 "INSERT INTO metrics (timestamp, cpu, ram_used, ram_total, ram_percent, bytes_sent, bytes_received) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (datetime.utcnow().isoformat(), cpu, ram_used, ram_total, ram_percent, bytes_sent, bytes_received),
+                (row["timestamp"], cpu, ram_used, ram_total, ram_percent, bytes_sent, bytes_received),
             )
             conn.commit()
+
+        _cache.append(row)
+        if len(_cache) > _max_cache:
+            del _cache[0 : len(_cache) - _max_cache]
 
     _maybe_cleanup()
 
 
 def get_latest(limit=60):
     with _lock:
+        if _cache:
+            rows = _cache[-limit:]
+            return list(rows)
+
         with sqlite3.connect(_db_path) as conn:
             conn.row_factory = sqlite3.Row
             rows = conn.execute(
                 "SELECT * FROM metrics ORDER BY id DESC LIMIT ?",
                 (limit,),
             ).fetchall()
-    return [dict(r) for r in reversed(rows)]
+        return [dict(r) for r in reversed(rows)]
 
 
 def _maybe_cleanup():
