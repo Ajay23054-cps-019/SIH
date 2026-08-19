@@ -22,4 +22,4 @@ def infor():
 def history(limit: int = Query(30, ge=1, le=1000)):
     return JSONResponse(shm_reader.get_latest_slot(limit))
 
-app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
+app.mount("/", StaticFiles(directory="../frontend", html=True), name="frontend")
