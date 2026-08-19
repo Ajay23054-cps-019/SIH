@@ -3,6 +3,10 @@ import os
 import struct
 import time
 import math
+import threading
+import database
+
+database.init_db()
 
 SHM_PATH = "/dev/shm/sysmon_shm"
 SHM_SIZE = 1048608
@@ -80,6 +84,35 @@ def _read_slot(mm, header, index):
     }
 
 
+def _db_writer_loop():
+    last_index = -1
+    while True:
+        try:
+            mm = _open_shm()
+            header = _parse_header(mm)
+            idx = header["write_index"]
+            if idx > 0 and idx != last_index:
+                slot = _read_slot(mm, header, idx - 1)
+                if slot:
+                    database.insert_metrics(
+                        slot["cpu_percentage"],
+                        slot["ram"]["used"],
+                        slot["ram"]["total"],
+                        slot["ram"]["percentage"],
+                        slot["network"]["bytes_sent"],
+                        slot["network"]["bytes_received"],
+                    )
+                    last_index = idx
+            mm.close()
+        except (FileNotFoundError, OSError):
+            last_index = -1
+        time.sleep(1)
+
+
+_db_thread = threading.Thread(target=_db_writer_loop, daemon=True)
+_db_thread.start()
+
+
 def information(target_processes=None):
     try:
         mm = _open_shm()
@@ -113,28 +146,4 @@ def information(target_processes=None):
 
 
 def get_latest_slot(limit=30):
-    try:
-        mm = _open_shm()
-        header = _parse_header(mm)
-        if header["write_index"] == 0:
-            mm.close()
-            return []
-        results = []
-        start = max(0, header["write_index"] - limit)
-        for i in range(start, header["write_index"]):
-            slot = _read_slot(mm, header, i)
-            if slot:
-                results.append({
-                    "timestamp": slot["timestamp"],
-                    "cpu": slot["cpu_percentage"],
-                    "ram_used": slot["ram"]["used"],
-                    "ram_total": slot["ram"]["total"],
-                    "ram_percent": slot["ram"]["percentage"],
-                    "bytes_sent": slot["network"]["bytes_sent"],
-                    "bytes_received": slot["network"]["bytes_received"],
-                })
-        results.reverse()
-        mm.close()
-        return results
-    except (FileNotFoundError, OSError):
-        return []
+    return database.get_latest(limit)

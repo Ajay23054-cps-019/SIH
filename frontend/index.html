@@ -4,38 +4,53 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>System Monitor</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#0f1419;color:#e6e6e6;font-family:ui-sans-serif,system-ui,sans-serif;padding:12px}
-.d{max-width:900px;margin:auto}
-.h{display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;border-bottom:1px solid #2d3548;margin-bottom:12px}
-.h h1{font-size:18px;background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.dot{width:8px;height:8px;border-radius:50%;background:#4ecdc4;display:inline-block;margin-right:6px}
-.err .dot{background:#ff6b6b}
-.c{display:flex;gap:8px;margin-bottom:12px}
-.b{padding:6px 12px;background:#1a1f2e;color:#e6e6e6;border:1px solid #2d3548;border-radius:4px;cursor:pointer;font-size:12px}
-.b:hover{background:#2d3548}
-.s{padding:6px 10px;background:#1a1f2e;color:#e6e6e6;border:1px solid #2d3548;border-radius:4px;font-size:12px}
-.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-bottom:12px}
-.card{background:#1e2530;border:1px solid #2d3548;border-radius:8px;padding:12px}
-.card h3{font-size:11px;color:#a0a0a0;text-transform:uppercase;margin-bottom:8px;letter-spacing:.5px}
-.v{font-size:22px;font-weight:700;text-align:right;margin-top:4px}
-svg{width:100%;height:80px;display:block}
-.t{width:100%;border-collapse:collapse;font-size:12px}
-.t th{background:#1a1f2e;padding:6px;text-align:left;color:#a0a0a0;font-weight:600;border-bottom:1px solid #2d3548}
-.t td{padding:6px;border-bottom:1px solid #2d3548}
-.f{display:flex;justify-content:space-between;margin-top:12px;font-size:11px;color:#a0a0a0;padding-top:8px;border-top:1px solid #2d3548}
-.m{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);align-items:center;justify-content:center}
+body{background:#0f1419;color:#e6e6e6;font-family:'Segoe UI',ui-sans-serif,system-ui,sans-serif;padding:16px;min-height:100vh}
+.d{max-width:1100px;margin:auto}
+.h{display:flex;justify-content:space-between;align-items:center;padding-bottom:16px;border-bottom:1px solid #2d3548;margin-bottom:20px}
+.h h1{font-size:22px;background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:700}
+.dot{width:10px;height:10px;border-radius:50%;background:#4ecdc4;display:inline-block;margin-right:8px;box-shadow:0 0 8px #4ecdc480}
+.err .dot{background:#ff6b6b;box-shadow:0 0 8px #ff6b6b80}
+.c{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.b{padding:8px 16px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s}
+.b:hover{transform:translateY(-1px);box-shadow:0 4px 12px #667eea50}
+.s{padding:8px 12px;background:#1a1f2e;color:#e6e6e6;border:1px solid #2d3548;border-radius:6px;font-size:13px;outline:none;cursor:pointer}
+.s:focus{border-color:#667eea}
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:16px}
+.card{background:linear-gradient(145deg,#1e2530,#1a1f2e);border:1px solid #2d3548;border-radius:12px;padding:16px;box-shadow:0 4px 6px rgba(0,0,0,.3);transition:transform .2s,box-shadow .2s}
+.card:hover{transform:translateY(-2px);box-shadow:0 8px 16px rgba(0,0,0,.4)}
+.card h3{font-size:12px;color:#a0a0a0;text-transform:uppercase;margin-bottom:12px;letter-spacing:1px;font-weight:600;display:flex;align-items:center;gap:8px}
+.card h3::before{content:'';width:4px;height:12px;background:linear-gradient(180deg,#667eea,#764ba2);border-radius:2px}
+.v{font-size:28px;font-weight:700;text-align:right;margin-top:8px;background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+canvas{width:100%!important;max-height:120px!important}
+.t{width:100%;border-collapse:collapse;font-size:13px}
+.t th{background:#1a1f2e;padding:10px;text-align:left;color:#a0a0a0;font-weight:600;border-bottom:2px solid #2d3548;text-transform:uppercase;font-size:11px;letter-spacing:.5px}
+.t td{padding:10px;border-bottom:1px solid #2d3548;transition:background .2s}
+.t tr:hover td{background:#2d354820}
+.t .pid{color:#667eea;font-weight:600;font-family:'Courier New',monospace}
+.f{display:flex;justify-content:space-between;align-items:center;margin-top:16px;font-size:11px;color:#a0a0a0;padding-top:12px;border-top:1px solid #2d3548}
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.m{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);align-items:center;justify-content:center;z-index:1000;backdrop-filter:blur(4px)}
 .m.show{display:flex}
-.mc{background:#1e2530;border:1px solid #2d3548;border-radius:8px;padding:16px;max-width:320px;width:90%}
-.mc p{color:#a0a0a0;margin:8px 0 12px;font-size:13px}
+.mc{background:linear-gradient(145deg,#1e2530,#1a1f2e);border:1px solid #2d3548;border-radius:12px;padding:20px;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+.mc b{color:#ff6b6b;font-size:16px}
+.mc p{color:#a0a0a0;margin:12px 0 16px;font-size:14px;line-height:1.5}
+.loading{display:inline-block;width:16px;height:16px;border:2px solid #2d3548;border-top-color:#667eea;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:600px){.g{grid-template-columns:1fr}.card{padding:12px}}
 </style>
 </head>
 <body>
 <div class="d">
   <div class="h">
-    <h1>System Monitor</h1>
-    <div id="s" class="dot"></div>
+    <h1><span id="statusDot" class="status-dot" style="background:#4ecdc4"></span> System Monitor</h1>
+    <div style="display:flex;align-items:center;gap:12px">
+      <span id="lu" style="font-size:11px;color:#a0a0a0">Never</span>
+      <div id="s" class="dot"></div>
+    </div>
   </div>
   <div class="c">
     <button class="b" onclick="update()">Refresh</button>
@@ -45,60 +60,92 @@ svg{width:100%;height:80px;display:block}
       <option value="firefox">Firefox</option>
       <option value="all">All</option>
     </select>
+    <span id="loading" class="loading" style="display:none"></span>
   </div>
   <div class="g">
     <div class="card">
-      <h3>CPU</h3>
-      <svg id="cpuC"></svg>
+      <h3>CPU Usage</h3>
+      <canvas id="cpuC"></canvas>
       <div class="v"><span id="cpuV">0</span>%</div>
     </div>
     <div class="card">
-      <h3>RAM</h3>
-      <svg id="ramC"></svg>
+      <h3>Memory Usage</h3>
+      <canvas id="ramC"></canvas>
       <div class="v"><span id="ramV">0</span>%</div>
     </div>
     <div class="card">
-      <h3>Network</h3>
-      <svg id="netC"></svg>
-      <div class="v" style="font-size:13px"><span id="sent">0</span> / <span id="rec">0</span></div>
+      <h3>Network I/O</h3>
+      <canvas id="netC"></canvas>
+      <div class="v" style="font-size:14px"><span id="sent">0 B</span> / <span id="rec">0 B</span></div>
     </div>
   </div>
   <div class="card">
-    <h3>Processes <span id="pc" style="float:right;color:#4ecdc4">0</span></h3>
+    <h3>Processes <span id="pc" style="float:right;color:#4ecdc4;font-weight:700">0</span></h3>
     <table class="t">
       <thead><tr><th>PID</th><th>Name</th><th>CPU</th><th>MEM</th></tr></thead>
       <tbody id="pb"></tbody>
     </table>
   </div>
   <div class="f">
-    <span id="lu">Never</span>
-    <span>1s</span>
+    <span>Auto-refresh every 1s</span>
+    <span>Powered by Chart.js</span>
   </div>
 </div>
 <div class="m" id="m">
   <div class="mc">
-    <b style="color:#ff6b6b">Error</b>
-    <p id="me">Connection failed</p>
+    <b>Connection Error</b>
+    <p id="me">Unable to connect to the server. Make sure the backend is running on port 8000.</p>
     <button class="b" onclick="document.getElementById('m').classList.remove('show')">Close</button>
   </div>
 </div>
 <script>
 const U='http://localhost:8000',N=30;
-let chartCache={cpu:[],ram:[],net:[]},pCtr=0;
-const B=['B','KB','MB','GB'];
+const B=['B','KB','MB','GB','TB'];
+let pCtr=0;
 function fB(b){if(!b)return'0 B';const k=1024,i=Math.min(Math.log(b)/Math.log(k)|0,B.length-1);return(b/Math.pow(k,i)).toFixed(1)+' '+B[i]}
 function fT(t){const d=new Date(t);return d.getHours()+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0')}
-function spark(id,data,color){
-  const s=document.getElementById(id),w=s.clientWidth||240,h=80;
-  if(!data.length){s.innerHTML='';return}
-  const max=Math.max(...data)||1,min=Math.min(...data),range=max-min||1;
-  const step=w/(data.length-1);
-  let path='M0 '+(h-((data[0]-min)/range*(h-8)+4));
-  for(let i=1;i<data.length;i++)path+=' L'+(i*step)+' '+(h-((data[i]-min)/range*(h-8)+4));
-  s.innerHTML='<path d="'+path+'" fill="none" stroke="'+color+'" stroke-width="2"/><path d="'+path+' L'+w+' '+h+' L0 '+h+' Z" fill="'+color+'20" opacity="0.3"/>';
+
+Chart.defaults.color='#a0a0a0';
+Chart.defaults.borderColor='#2d3548';
+Chart.defaults.font.family="'Segoe UI',ui-sans-serif,system-ui,sans-serif";
+Chart.defaults.font.size=10;
+Chart.defaults.plugins.tooltip.backgroundColor='rgba(30,37,48,.95)';
+Chart.defaults.plugins.tooltip.borderColor='#2d3548';
+Chart.defaults.plugins.tooltip.borderWidth=1;
+Chart.defaults.plugins.tooltip.padding=10;
+Chart.defaults.plugins.tooltip.titleFont={size:12,weight:'600'};
+Chart.defaults.plugins.tooltip.bodyFont={size:11};
+Chart.defaults.plugins.tooltip.displayColors=true;
+Chart.defaults.plugins.tooltip.boxPadding=4;
+
+function makeGradient(ctx,color,height){
+  const g=ctx.createLinearGradient(0,0,0,height||120);
+  g.addColorStop(0,color+'40');
+  g.addColorStop(1,color+'05');
+  return g;
 }
+
+function createChart(id,label,color,min,max){
+  const ctx=document.getElementById(id).getContext('2d');
+  return new Chart(ctx,{
+    type:'line',
+    data:{labels:[],      datasets:[{label,data:[],borderColor:color,backgroundColor:makeGradient(ctx,color),borderWidth:2.5,pointRadius:0,pointHoverRadius:0,tension:.4,fill:true}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:300,easing:'easeOutQuart'},interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{enabled:true}},scales:{x:{display:false},y:{min,max,ticks:{stepSize:max<=100?25:undefined,padding:8,callback:v=>max<=100?v+'%':fB(v)}}}},
+    plugins:[{beforeDraw(chart){
+      const{ctx:c,chartArea:{width:w,height:h},data:{datasets:[ds]}}=chart;
+      if(!ds.data.length)return;
+      const val=ds.data[ds.data.length-1];
+      c.save();c.fillStyle='#e6e6e6';c.font='bold 11px Segoe UI';c.textAlign='right';c.fillText(typeof val==='number'?Number.isInteger(val)?val:val.toFixed(1):val,w-8,16);c.restore();
+    }}]
+  });
+}
+
+const cpuChart=createChart('cpuC','CPU %','#ff6b6b',0,100);
+const ramChart=createChart('ramC','RAM %','#4ecdc4',0,100);
+const netChart=createChart('netC','Network','#45b7d1',0,undefined);
+
 async function fetchD(name){
-  const url=name==='all'?U+'/?code=': U+'/?code='+name;
+  const url=name==='all'?U+'/?code=':U+'/?code='+name;
   const r=await fetch(url);if(!r.ok)throw new Error(r.status);return r.json();
 }
 async function fetchH(){
@@ -106,32 +153,39 @@ async function fetchH(){
 }
 function updateCharts(h){
   if(!h||!h.length)return;
-  const l=h.length,labels=new Array(l),cpu=new Array(l),ram=new Array(l),s=new Array(l),r=new Array(l);
+  const l=h.length,labels=new Array(l),cpu=new Array(l),ram=new Array(l),net=new Array(l);
   for(let i=0;i<l;i++){
-    const x=h[i];labels[i]=fT(x.timestamp);cpu[i]=x.cpu;ram[i]=x.ram_percent;s[i]=x.bytes_sent;r[i]=x.bytes_received;
+    const x=h[i];labels[i]=fT(x.timestamp);cpu[i]=x.cpu;ram[i]=x.ram_percent;net[i]=x.bytes_sent+x.bytes_received;
   }
-  spark('cpuC',cpu,'#ff6b6b');spark('ramC',ram,'#4ecdc4');
-  chartCache.net.push(s[l-1]);chartCache.net.push(r[l-1]);if(chartCache.net.length>20)chartCache.net.splice(0,2);
-  spark('netC',chartCache.net,'#45b7d1');
-  const last=l-1;
-  document.getElementById('cpuV').textContent=cpu[last].toFixed(1);
-  document.getElementById('ramV').textContent=ram[last].toFixed(1);
-  document.getElementById('sent').textContent=fB(s[last]);
-  document.getElementById('rec').textContent=fB(r[last]);
+  const upd='active';
+  cpuChart.data.labels=labels;cpuChart.data.datasets[0].data=cpu;cpuChart.update(upd);
+  ramChart.data.labels=labels;ramChart.data.datasets[0].data=ram;ramChart.update(upd);
+  netChart.data.labels=labels;netChart.data.datasets[0].data=net;netChart.update(upd);
+  const last=h[l-1];
+  document.getElementById('cpuV').textContent=cpu[l-1].toFixed(1);
+  document.getElementById('ramV').textContent=ram[l-1].toFixed(1);
+  document.getElementById('sent').textContent=fB(last.bytes_sent);
+  document.getElementById('rec').textContent=fB(last.bytes_received);
 }
 function updateProc(ps){
   const b=document.getElementById('pb'),n=document.getElementById('pc');
-  if(!ps||!ps.length){b.innerHTML='<tr><td colspan="4" style="text-align:center;color:#a0a0a0">-</td></tr>';n.textContent='0';return}
-  n.textContent=ps.length;let h='';for(let i=0;i<ps.length;i++)h+='<tr><td>'+ps[i].pid+'</td><td>'+ps[i].name+'</td><td>'+(ps[i].cpu_percent||0).toFixed(1)+'%</td><td>'+(ps[i].memory_percent||0).toFixed(1)+'%</td></tr>';b.innerHTML=h;
+  if(!ps||!ps.length){b.innerHTML='<tr><td colspan="4" style="text-align:center;color:#a0a0a0;padding:20px">No matching processes</td></tr>';n.textContent='0';return}
+  n.textContent=ps.length;let h='';for(let i=0;i<ps.length;i++){const p=ps[i];h+='<tr><td class="pid">'+p.pid+'</td><td>'+p.name+'</td><td>'+(p.cpu_percent||0).toFixed(1)+'%</td><td>'+(p.memory_percent||0).toFixed(1)+'%</td></tr>'}b.innerHTML=h;
 }
-function err(e){document.getElementById('me').textContent=e;document.getElementById('m').classList.add('show');document.getElementById('s').classList.add('err')}
+function err(e){document.getElementById('me').textContent=e;document.getElementById('m').classList.add('show');document.getElementById('s').classList.add('err');document.getElementById('statusDot').style.background='#ff6b6b'}
 async function update(){
   const f=document.getElementById('f').value;
+  document.getElementById('loading').style.display='inline-block';
   try{
     const[d,h]=await Promise.all([fetchD(f),fetchH()]);
-    updateCharts(h);pCtr++;if(pCtr%5===0)updateProc(d.processes);
-    document.getElementById('lu').textContent='Updated '+new Date().toLocaleTimeString();document.getElementById('s').classList.remove('err');
+    updateCharts(h);
+    if(pCtr%3===0)updateProc(d.processes);
+    pCtr++;
+    document.getElementById('lu').textContent='Updated '+new Date().toLocaleTimeString();
+    document.getElementById('s').classList.remove('err');
+    document.getElementById('statusDot').style.background='#4ecdc4';
   }catch(e){err(e.message)}
+  document.getElementById('loading').style.display='none';
 }
 setInterval(update,1000);
 document.addEventListener('DOMContentLoaded',update);
