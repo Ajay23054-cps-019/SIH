@@ -2,8 +2,7 @@ from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
-import processes
-import database
+import shm_reader
 
 app = FastAPI()
 
@@ -17,10 +16,10 @@ app.add_middleware(
 
 @app.get("/")
 def infor():
-    return processes.information(["code"])
+    return shm_reader.information()
 
 @app.get("/history")
 def history(limit: int = Query(30, ge=1, le=1000)):
-    return JSONResponse(database.get_latest(limit))
+    return JSONResponse(shm_reader.get_latest_slot(limit))
 
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
