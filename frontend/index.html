@@ -40,68 +40,102 @@ canvas{width:100%!important;max-height:120px!important}
 .mc p{color:#a0a0a0;margin:12px 0 16px;font-size:14px;line-height:1.5}
 .loading{display:inline-block;width:16px;height:16px;border:2px solid #2d3548;border-top-color:#667eea;border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+.login-card{background:linear-gradient(145deg,#1e2530,#1a1f2e);border:1px solid #2d3548;border-radius:12px;padding:32px;max-width:400px;margin:80px auto;box-shadow:0 8px 32px rgba(0,0,0,.5);text-align:center}
+.login-card h2{font-size:24px;margin-bottom:8px;background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.login-card p{color:#a0a0a0;margin-bottom:24px;font-size:13px}
+.login-input{width:100%;padding:10px 12px;background:#0f1419;color:#e6e6e6;border:1px solid #2d3548;border-radius:6px;font-size:14px;margin-bottom:12px;outline:none;transition:border-color .2s}
+.login-input:focus{border-color:#667eea}
+.login-btn{width:100%;padding:12px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600;transition:all .2s}
+.login-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px #667eea50}
+.login-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.hidden{display:none!important}
 @media(max-width:600px){.g{grid-template-columns:1fr}.card{padding:12px}}
 </style>
 </head>
 <body>
 <div class="d">
-  <div class="h">
-    <h1><span id="statusDot" class="status-dot" style="background:#4ecdc4"></span> System Monitor</h1>
-    <div style="display:flex;align-items:center;gap:12px">
-      <span id="lu" style="font-size:11px;color:#a0a0a0">Never</span>
-      <div id="s" class="dot"></div>
+  <div id="loginPage" class="login-card">
+    <h2>System Monitor</h2>
+    <p id="loginSubtitle">Enter your credentials to access the dashboard</p>
+    <input type="text" id="loginUser" class="login-input" placeholder="Username" autocomplete="username">
+    <input type="password" id="loginPass" class="login-input" placeholder="Password" autocomplete="current-password">
+    <input type="password" id="loginPassConfirm" class="login-input hidden" placeholder="Confirm Password" autocomplete="new-password">
+    <button class="login-btn" id="loginBtn" onclick="authMode==='login'?doLogin():doSignup()">Sign In</button>
+    <p style="margin-top:12px;font-size:12px;color:#a0a0a0">
+      <span id="authToggleText">Don't have an account?</span>
+      <a href="#" id="authToggleBtn" onclick="toggleAuthMode()" style="color:#667eea;text-decoration:none;font-weight:600">Sign Up</a>
+    </p>
+    <p id="loginError" style="color:#ff6b6b;margin-top:12px;font-size:12px;display:none"></p>
+  </div>
+
+  <div id="dashboard" class="hidden">
+    <div class="h">
+      <h1><span id="statusDot" class="status-dot" style="background:#4ecdc4"></span> System Monitor</h1>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span id="lu" style="font-size:11px;color:#a0a0a0">Never</span>
+        <div id="s" class="dot"></div>
+      </div>
     </div>
-  </div>
-  <div class="c">
-    <button class="b" onclick="update()">Refresh</button>
-    <select class="s" id="f" onchange="update()">
-      <option value="code">VS Code</option>
-      <option value="chrome">Chrome</option>
-      <option value="firefox">Firefox</option>
-      <option value="all">All</option>
-    </select>
-    <span id="loading" class="loading" style="display:none"></span>
-  </div>
-  <div class="g">
+    <div class="c">
+      <button class="b" onclick="update()">Refresh</button>
+      <select class="s" id="f" onchange="update()">
+        <option value="code">VS Code</option>
+        <option value="chrome">Chrome</option>
+        <option value="firefox">Firefox</option>
+        <option value="all">All</option>
+      </select>
+      <button class="b" onclick="logout()" style="background:linear-gradient(135deg,#ff6b6b,#ee5a6f)">Logout</button>
+      <span id="loading" class="loading" style="display:none"></span>
+    </div>
+    <div class="g">
+      <div class="card">
+        <h3>CPU Usage</h3>
+        <canvas id="cpuC"></canvas>
+        <div class="v"><span id="cpuV">0</span>%</div>
+      </div>
+      <div class="card">
+        <h3>Memory Usage</h3>
+        <canvas id="ramC"></canvas>
+        <div class="v"><span id="ramV">0</span>%</div>
+      </div>
+      <div class="card">
+        <h3>Network I/O</h3>
+        <canvas id="netC"></canvas>
+        <div class="v" style="font-size:14px"><span id="sent" style="color:#ff6b6b">▲ 0 B</span> &nbsp; <span id="rec" style="color:#4ecdc4">▼ 0 B</span></div>
+      </div>
+    </div>
     <div class="card">
-      <h3>CPU Usage</h3>
-      <canvas id="cpuC"></canvas>
-      <div class="v"><span id="cpuV">0</span>%</div>
+      <h3>Processes <span id="pc" style="float:right;color:#4ecdc4;font-weight:700">0</span></h3>
+      <table class="t">
+        <thead><tr><th>PID</th><th>Name</th><th>CPU</th><th>MEM</th></tr></thead>
+        <tbody id="pb"></tbody>
+      </table>
     </div>
-    <div class="card">
-      <h3>Memory Usage</h3>
-      <canvas id="ramC"></canvas>
-      <div class="v"><span id="ramV">0</span>%</div>
+    <div class="f">
+      <span>Auto-refresh every 1s</span>
+      <span>Powered by Chart.js</span>
     </div>
-    <div class="card">
-      <h3>Network I/O</h3>
-      <canvas id="netC"></canvas>
-      <div class="v" style="font-size:14px"><span id="sent">0 B</span> / <span id="rec">0 B</span></div>
-    </div>
-  </div>
-  <div class="card">
-    <h3>Processes <span id="pc" style="float:right;color:#4ecdc4;font-weight:700">0</span></h3>
-    <table class="t">
-      <thead><tr><th>PID</th><th>Name</th><th>CPU</th><th>MEM</th></tr></thead>
-      <tbody id="pb"></tbody>
-    </table>
-  </div>
-  <div class="f">
-    <span>Auto-refresh every 1s</span>
-    <span>Powered by Chart.js</span>
   </div>
 </div>
 <div class="m" id="m">
   <div class="mc">
     <b>Connection Error</b>
-    <p id="me">Unable to connect to the server. Make sure the backend is running on port 8000.</p>
+    <p id="me">Unable to connect to the server. Make sure the backend API is running and accessible.</p>
     <button class="b" onclick="document.getElementById('m').classList.remove('show')">Close</button>
   </div>
 </div>
 <script>
-const U='http://localhost:8000',N=30;
+const apiUrl = new URLSearchParams(window.location.search).get('api');
+const U = apiUrl ? apiUrl.replace(/\/$/, '') : window.location.origin;
+const isFileProtocol = window.location.protocol === 'file:';
+if (isFileProtocol) {
+  document.getElementById('me').textContent = 'This page must be served over HTTP. Run a local server (e.g. python3 -m http.server 3000) inside frontend/ and open http://localhost:3000?api=http://localhost:8000';
+  document.getElementById('m').classList.add('show');
+}
+const N=30;
 const B=['B','KB','MB','GB','TB'];
 let pCtr=0;
+
 function fB(b){if(!b)return'0 B';const k=1024,i=Math.min(Math.log(b)/Math.log(k)|0,B.length-1);return(b/Math.pow(k,i)).toFixed(1)+' '+B[i]}
 function fT(t){const d=new Date(t);return d.getHours()+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0')}
 
@@ -125,13 +159,31 @@ function makeGradient(ctx,color,height){
   return g;
 }
 
-function createChart(id,label,color,min,max){
+function createChart(id,label,color,min,max,isBar=false){
   const ctx=document.getElementById(id).getContext('2d');
+  const baseOpts={
+    responsive:true,
+    maintainAspectRatio:false,
+    animation:{duration:200,easing:'easeOutQuart'},
+    plugins:{legend:{display:false},tooltip:{enabled:true}},
+    scales:{
+      x:{display:false},
+      y:{min,max,ticks:{stepSize:max<=100?25:undefined,padding:8,callback:v=>max<=100?v+'%':fB(v)}},
+    }
+  };
+  if(isBar){
+    baseOpts.scales.y.beginAtZero=true;
+    delete baseOpts.scales.y.min;
+    delete baseOpts.scales.y.max;
+  }
   return new Chart(ctx,{
-    type:'line',
-    data:{labels:[],      datasets:[{label,data:[],borderColor:color,backgroundColor:makeGradient(ctx,color),borderWidth:2.5,pointRadius:0,pointHoverRadius:0,tension:.4,fill:true}]},
-    options:{responsive:true,maintainAspectRatio:false,animation:{duration:300,easing:'easeOutQuart'},interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{enabled:true}},scales:{x:{display:false},y:{min,max,ticks:{stepSize:max<=100?25:undefined,padding:8,callback:v=>max<=100?v+'%':fB(v)}}}},
-    plugins:[{beforeDraw(chart){
+    type:isBar?'bar':'line',
+    data:{labels:[],datasets:isBar?[
+      {label:'Download',data:[],backgroundColor:'#4ecdc4',borderColor:'#4ecdc4',borderWidth:1,barPercentage:0.6,categoryPercentage:0.8,borderRadius:2},
+      {label:'Upload',data:[],backgroundColor:'#ff6b6b',borderColor:'#ff6b6b',borderWidth:1,barPercentage:0.6,categoryPercentage:0.8,borderRadius:2}
+    ]:[{label,data:[],borderColor:color,backgroundColor:makeGradient(ctx,color),borderWidth:2.5,pointRadius:0,pointHoverRadius:0,tension:.4,fill:true}]},
+    options:baseOpts,
+    plugins:isBar?[]:[{beforeDraw(chart){
       const{ctx:c,chartArea:{width:w,height:h},data:{datasets:[ds]}}=chart;
       if(!ds.data.length)return;
       const val=ds.data[ds.data.length-1];
@@ -140,32 +192,110 @@ function createChart(id,label,color,min,max){
   });
 }
 
-const cpuChart=createChart('cpuC','CPU %','#ff6b6b',0,100);
-const ramChart=createChart('ramC','RAM %','#4ecdc4',0,100);
-const netChart=createChart('netC','Network','#45b7d1',0,undefined);
+let cpuChart, ramChart, netChart;
+
+function initCharts(){
+  cpuChart=createChart('cpuC','CPU %','#ff6b6b',0,100);
+  ramChart=createChart('ramC','RAM %','#4ecdc4',0,100);
+  netChart=createChart('netC','Network','#45b7d1',0,undefined,true);
+}
+
+function showLogin(){
+  document.getElementById('loginPage').classList.remove('hidden');
+  document.getElementById('dashboard').classList.add('hidden');
+}
+
+function showDashboard(){
+  document.getElementById('loginPage').classList.add('hidden');
+  document.getElementById('dashboard').classList.remove('hidden');
+  if(!cpuChart) initCharts();
+}
+
+let authMode = 'login';
+
+function toggleAuthMode(){
+  if(authMode === 'login'){
+    authMode = 'signup';
+    document.getElementById('loginSubtitle').textContent = 'Create a new account';
+    document.getElementById('loginBtn').textContent = 'Sign Up';
+    document.getElementById('authToggleText').textContent = 'Already have an account?';
+    document.getElementById('authToggleBtn').textContent = 'Sign In';
+    document.getElementById('loginPassConfirm').classList.remove('hidden');
+    document.getElementById('loginError').style.display='none';
+  } else {
+    authMode = 'login';
+    document.getElementById('loginSubtitle').textContent = 'Enter your credentials to access the dashboard';
+    document.getElementById('loginBtn').textContent = 'Sign In';
+    document.getElementById('authToggleText').textContent = "Don't have an account?";
+    document.getElementById('authToggleBtn').textContent = 'Sign Up';
+    document.getElementById('loginPassConfirm').classList.add('hidden');
+    document.getElementById('loginError').style.display='none';
+  }
+}
+
+async function doLogin(){
+  const user=document.getElementById('loginUser').value.trim();
+  const pass=document.getElementById('loginPass').value;
+  const errEl=document.getElementById('loginError');
+  const btn=document.getElementById('loginBtn');
+  if(!user||!pass){errEl.textContent='Please enter both username and password';errEl.style.display='block';return}
+  btn.disabled=true;errEl.style.display='none';
+  try{
+    const r=await fetch(U+'/login',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username:user,password:pass}),credentials:'include'});
+    if(!r.ok){const e=await r.json();throw new Error(e.detail||'Login failed')}
+    const data=await r.json();
+    showDashboard();
+    update();
+  }catch(e){errEl.textContent=e.message;errEl.style.display='block'}
+  btn.disabled=false;
+}
+
+async function doSignup(){
+  const user=document.getElementById('loginUser').value.trim();
+  const pass=document.getElementById('loginPass').value;
+  const confirm=document.getElementById('loginPassConfirm').value;
+  const errEl=document.getElementById('loginError');
+  const btn=document.getElementById('loginBtn');
+  if(!user||!pass||!confirm){errEl.textContent='Please fill in all fields';errEl.style.display='block';return}
+  if(pass!==confirm){errEl.textContent='Passwords do not match';errEl.style.display='block';return}
+  btn.disabled=true;errEl.style.display='none';
+  try{
+    const r=await fetch(U+'/signup',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username:user,password:pass}),credentials:'include'});
+    if(!r.ok){const e=await r.json();throw new Error(e.detail||'Signup failed')}
+    errEl.style.display='none';
+    toggleAuthMode();
+    errEl.textContent='Account created! Please sign in.';errEl.style.display='block';errEl.style.color='#4ecdc4';
+    setTimeout(()=>{errEl.style.color='#ff6b6b';errEl.style.display='none';},3000);
+  }catch(e){errEl.textContent=e.message;errEl.style.display='block'}
+  btn.disabled=false;
+}
+
+async function logout(){
+  await fetch(U+'/logout',{method:'POST',credentials:'include'});
+  showLogin();
+}
 
 async function fetchD(name){
-  const url=name==='all'?U+'/?code=':U+'/?code='+name;
-  const r=await fetch(url);if(!r.ok)throw new Error(r.status);return r.json();
+  const url=U+'/api/live?code='+(name==='all'?'':name);
+  const r=await fetch(url,{credentials:'include'});if(!r.ok)throw new Error(r.status);return r.json();
 }
 async function fetchH(){
-  const r=await fetch(U+'/history?limit='+N);if(!r.ok)return[];return r.json();
+  const r=await fetch(U+'/api/history?limit='+N,{credentials:'include'});if(!r.ok)return[];return r.json();
 }
 function updateCharts(h){
   if(!h||!h.length)return;
-  const l=h.length,labels=new Array(l),cpu=new Array(l),ram=new Array(l),net=new Array(l);
+  const l=h.length,labels=new Array(l),cpu=new Array(l),ram=new Array(l),down=new Array(l),up=new Array(l);
   for(let i=0;i<l;i++){
-    const x=h[i];labels[i]=fT(x.timestamp);cpu[i]=x.cpu;ram[i]=x.ram_percent;net[i]=x.bytes_sent+x.bytes_received;
+    const x=h[i];labels[i]=fT(x.timestamp);cpu[i]=x.cpu;ram[i]=x.ram_percent;down[i]=x.bytes_received;up[i]=-x.bytes_sent;
   }
-  const upd='active';
-  cpuChart.data.labels=labels;cpuChart.data.datasets[0].data=cpu;cpuChart.update(upd);
-  ramChart.data.labels=labels;ramChart.data.datasets[0].data=ram;ramChart.update(upd);
-  netChart.data.labels=labels;netChart.data.datasets[0].data=net;netChart.update(upd);
+  cpuChart.data.labels=labels;cpuChart.data.datasets[0].data=cpu;cpuChart.update('none');
+  ramChart.data.labels=labels;ramChart.data.datasets[0].data=ram;ramChart.update('none');
+  netChart.data.labels=labels;netChart.data.datasets[0].data=down;netChart.data.datasets[1].data=up;netChart.update('none');
   const last=h[l-1];
   document.getElementById('cpuV').textContent=cpu[l-1].toFixed(1);
   document.getElementById('ramV').textContent=ram[l-1].toFixed(1);
-  document.getElementById('sent').textContent=fB(last.bytes_sent);
-  document.getElementById('rec').textContent=fB(last.bytes_received);
+  document.getElementById('sent').innerHTML='▼ '+fB(last.bytes_sent);
+  document.getElementById('rec').innerHTML='▲ '+fB(last.bytes_received);
 }
 function updateProc(ps){
   const b=document.getElementById('pb'),n=document.getElementById('pc');
@@ -174,21 +304,33 @@ function updateProc(ps){
 }
 function err(e){document.getElementById('me').textContent=e;document.getElementById('m').classList.add('show');document.getElementById('s').classList.add('err');document.getElementById('statusDot').style.background='#ff6b6b'}
 async function update(){
+  if (isFileProtocol) return;
   const f=document.getElementById('f').value;
   document.getElementById('loading').style.display='inline-block';
   try{
     const[d,h]=await Promise.all([fetchD(f),fetchH()]);
-    updateCharts(h);
-    if(pCtr%3===0)updateProc(d.processes);
-    pCtr++;
+    updateCharts(h);if(pCtr%3===0)updateProc(d.processes);pCtr++;
     document.getElementById('lu').textContent='Updated '+new Date().toLocaleTimeString();
     document.getElementById('s').classList.remove('err');
     document.getElementById('statusDot').style.background='#4ecdc4';
-  }catch(e){err(e.message)}
+  }catch(e){
+    if(e.message==='401'){
+      showLogin();
+      return;
+    }
+    err(e.message);
+  }
   document.getElementById('loading').style.display='none';
 }
-setInterval(update,1000);
-document.addEventListener('DOMContentLoaded',update);
+
+document.addEventListener('DOMContentLoaded',()=>{
+  if (isFileProtocol) return;
+  showDashboard();
+  update();
+  document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')authMode==='login'?doLogin():doSignup();});
+  document.getElementById('loginPassConfirm').addEventListener('keydown',e=>{if(e.key==='Enter')doSignup();});
+});
+setInterval(()=>{if(!document.getElementById('dashboard').classList.contains('hidden'))update();},1000);
 </script>
 </body>
 </html>

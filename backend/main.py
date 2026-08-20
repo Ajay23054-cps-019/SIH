@@ -1,6 +1,5 @@
 from fastapi import FastAPI, Query, HTTPException, Depends, Form, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 import shm_reader
 import auth
@@ -17,7 +16,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8000", "http://127.0.0.1:8000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -81,6 +80,3 @@ def infor(user=Depends(get_current_user)):
 @app.get("/api/history")
 def history(limit: int = Query(30, ge=1, le=1000), user=Depends(get_current_user)):
     return JSONResponse(shm_reader.get_latest_slot(limit))
-
-
-app.mount("/", StaticFiles(directory="/home/ajay/Desktop/SIH/frontend", html=True), name="frontend")
