@@ -126,12 +126,7 @@ canvas{width:100%!important;max-height:120px!important}
 </div>
 <script>
 const apiUrl = new URLSearchParams(window.location.search).get('api');
-const U = apiUrl ? apiUrl.replace(/\/$/, '') : window.location.origin;
-const isFileProtocol = window.location.protocol === 'file:';
-if (isFileProtocol) {
-  document.getElementById('me').textContent = 'This page must be served over HTTP. Run a local server (e.g. python3 -m http.server 3000) inside frontend/ and open http://localhost:3000?api=http://localhost:8000';
-  document.getElementById('m').classList.add('show');
-}
+const U = apiUrl ? apiUrl.replace(/\/$/, '') : (window.location.protocol === 'file:' ? 'http://localhost:8000' : window.location.origin);
 const N=30;
 const B=['B','KB','MB','GB','TB'];
 let pCtr=0;
@@ -304,7 +299,6 @@ function updateProc(ps){
 }
 function err(e){document.getElementById('me').textContent=e;document.getElementById('m').classList.add('show');document.getElementById('s').classList.add('err');document.getElementById('statusDot').style.background='#ff6b6b'}
 async function update(){
-  if (isFileProtocol) return;
   const f=document.getElementById('f').value;
   document.getElementById('loading').style.display='inline-block';
   try{
@@ -324,7 +318,6 @@ async function update(){
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
-  if (isFileProtocol) return;
   showDashboard();
   update();
   document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')authMode==='login'?doLogin():doSignup();});
