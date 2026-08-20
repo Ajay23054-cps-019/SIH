@@ -1,8 +1,7 @@
-from fastapi import FastAPI, Query, HTTPException, Depends, Form
+from fastapi import FastAPI, Query, HTTPException, Depends, Form, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import shm_reader
 import auth
 
@@ -18,19 +17,18 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:8000", "http://127.0.0.1:8000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-security = HTTPBearer(auto_error=False)
 
-
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    if not credentials:
+def get_current_user(request: Request):
+    token = request.cookies.get("access_token")
+    if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    user = auth.validate_token(credentials.credentials)
+    user = auth.validate_token(token)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     return user
@@ -51,11 +49,28 @@ def signup(username: str = Form(...), password: str = Form(...)):
 
 
 @app.post("/login")
-def login(username: str = Form(...), password: str = Form(...)):
+def login(response: Response, username: str = Form(...), password: str = Form(...)):
     token = auth.validate_user(username, password)
     if not token:
         raise HTTPException(status_code=401, detail="Invalid username or password")
-    return {"access_token": token, "token_type": "bearer", "username": username}
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=24 * 60 * 60,
+    )
+    return {"message": "Login successful", "username": username}
+
+
+@app.post("/logout")
+def logout(request: Request, response: Response):
+    token = request.cookies.get("access_token")
+    if token:
+        auth.revoke_token(token)
+    response.delete_cookie("access_token")
+    return {"message": "Logged out"}
 
 
 @app.get("/api/live")
