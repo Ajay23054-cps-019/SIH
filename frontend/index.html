@@ -159,7 +159,7 @@ function createChart(id,label,color,min,max,isBar=false){
   const baseOpts={
     responsive:true,
     maintainAspectRatio:false,
-    animation:{duration:200,easing:'easeOutQuart'},
+    animation:{duration:0,easing:'easeOutQuart'},
     plugins:{legend:{display:false},tooltip:{enabled:true}},
     scales:{
       x:{display:false},
@@ -239,6 +239,7 @@ async function doLogin(){
     const r=await fetch(U+'/login',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username:user,password:pass}),credentials:'include'});
     if(!r.ok){const e=await r.json();throw new Error(e.detail||'Login failed')}
     const data=await r.json();
+    if(data.access_token){localStorage.setItem('access_token',data.access_token)}
     showDashboard();
     update();
   }catch(e){errEl.textContent=e.message;errEl.style.display='block'}
@@ -266,16 +267,22 @@ async function doSignup(){
 }
 
 async function logout(){
+  localStorage.removeItem('access_token');
   await fetch(U+'/logout',{method:'POST',credentials:'include'});
   showLogin();
 }
 
+function authHeaders(){
+  const token=localStorage.getItem('access_token');
+  return token?{'Authorization':'Bearer '+token}:{};
+}
+
 async function fetchD(name){
   const url=U+'/api/live?code='+(name==='all'?'':name);
-  const r=await fetch(url,{credentials:'include'});if(!r.ok)throw new Error(r.status);return r.json();
+  const r=await fetch(url,{headers:authHeaders(),credentials:'include'});if(!r.ok)throw new Error(r.status);return r.json();
 }
 async function fetchH(){
-  const r=await fetch(U+'/api/history?limit='+N,{credentials:'include'});if(!r.ok)return[];return r.json();
+  const r=await fetch(U+'/api/history?limit='+N,{headers:authHeaders(),credentials:'include'});if(!r.ok)return[];return r.json();
 }
 function updateCharts(h){
   if(!h||!h.length)return;
@@ -309,6 +316,7 @@ async function update(){
     document.getElementById('statusDot').style.background='#4ecdc4';
   }catch(e){
     if(e.message==='401'){
+      localStorage.removeItem('access_token');
       showLogin();
       return;
     }
@@ -317,13 +325,27 @@ async function update(){
   document.getElementById('loading').style.display='none';
 }
 
+let pollInterval = null;
+function startPolling(){
+  if(pollInterval) return;
+  pollInterval = setInterval(()=>{
+    if(!document.getElementById('dashboard').classList.contains('hidden')) update();
+  }, 2000);
+}
+function stopPolling(){
+  if(pollInterval){clearInterval(pollInterval);pollInterval=null}
+}
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden) stopPolling();
+  else startPolling();
+});
 document.addEventListener('DOMContentLoaded',()=>{
   showDashboard();
   update();
   document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')authMode==='login'?doLogin():doSignup();});
   document.getElementById('loginPassConfirm').addEventListener('keydown',e=>{if(e.key==='Enter')doSignup();});
+  startPolling();
 });
-setInterval(()=>{if(!document.getElementById('dashboard').classList.contains('hidden'))update();},1000);
 </script>
 </body>
 </html>

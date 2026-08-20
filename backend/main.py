@@ -25,7 +25,12 @@ app.add_middleware(
 
 
 def get_current_user(request: Request):
-    token = request.cookies.get("access_token")
+    auth_header = request.headers.get("Authorization")
+    token = None
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ", 1)[1]
+    if not token:
+        token = request.cookies.get("access_token")
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
     user = auth.validate_token(token)
@@ -49,19 +54,11 @@ def signup(username: str = Form(...), password: str = Form(...)):
 
 
 @app.post("/login")
-def login(response: Response, username: str = Form(...), password: str = Form(...)):
+def login(username: str = Form(...), password: str = Form(...)):
     token = auth.validate_user(username, password)
     if not token:
         raise HTTPException(status_code=401, detail="Invalid username or password")
-    response.set_cookie(
-        key="access_token",
-        value=token,
-        httponly=True,
-        secure=False,
-        samesite="lax",
-        max_age=24 * 60 * 60,
-    )
-    return {"message": "Login successful", "username": username}
+    return {"message": "Login successful", "username": username, "access_token": token}
 
 
 @app.post("/logout")
