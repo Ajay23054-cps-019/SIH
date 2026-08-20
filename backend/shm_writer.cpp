@@ -128,7 +128,10 @@ static std::pair<uint64_t, uint64_t> read_network() {
         std::string data = line.substr(pos + 1);
         auto parts = split(data, ' ');
         if (parts.size() < 10) continue;
-        if (iface.find("lo") != std::string::npos) continue;
+        size_t start = iface.find_first_not_of(" \t\r\n");
+        size_t end = iface.find_last_not_of(" \t\r\n");
+        std::string iface_trimmed = (start == std::string::npos || end == std::string::npos) ? "" : iface.substr(start, end - start + 1);
+        if (iface_trimmed == "lo") continue;
         total_recv += std::stoull(parts[0]);
         total_sent += std::stoull(parts[8]);
     }

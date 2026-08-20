@@ -1,11 +1,12 @@
+import os
 import sqlite3
 from datetime import datetime
 import threading
 import json
 
 
-_db_path = "system_metrics.db"
-_log_path = "metrics_log.json"
+_db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "system_metrics.db")
+_log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "metrics_log.json")
 _lock = threading.Lock()
 _max_rows = 500
 _cache = []

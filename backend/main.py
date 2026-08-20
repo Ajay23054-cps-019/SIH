@@ -1,8 +1,18 @@
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, HTTPException, Depends, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import shm_reader
+import auth
+
+pwd = auth.create_default_admin()
+if pwd:
+    print("=" * 50, flush=True)
+    print("DEFAULT ADMIN CREDENTIALS", flush=True)
+    print("Username: admin", flush=True)
+    print("Password: " + pwd, flush=True)
+    print("=" * 50, flush=True)
 
 app = FastAPI()
 
@@ -14,12 +24,48 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/")
-def infor():
+security = HTTPBearer(auto_error=False)
+
+
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    if not credentials:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    user = auth.validate_token(credentials.credentials)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    return user
+
+
+@app.post("/signup")
+def signup(username: str = Form(...), password: str = Form(...)):
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="Username and password are required")
+    if len(username) < 3:
+        raise HTTPException(status_code=400, detail="Username must be at least 3 characters")
+    if len(password) < 4:
+        raise HTTPException(status_code=400, detail="Password must be at least 4 characters")
+    created = auth.create_user(username, password)
+    if not created:
+        raise HTTPException(status_code=400, detail="Username already exists")
+    return {"message": "User created successfully"}
+
+
+@app.post("/login")
+def login(username: str = Form(...), password: str = Form(...)):
+    token = auth.validate_user(username, password)
+    if not token:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    return {"access_token": token, "token_type": "bearer", "username": username}
+
+
+@app.get("/api/live")
+def infor(user=Depends(get_current_user)):
     return shm_reader.information()
 
-@app.get("/history")
-def history(limit: int = Query(30, ge=1, le=1000)):
+
+@app.get("/api/history")
+def history(limit: int = Query(30, ge=1, le=1000), user=Depends(get_current_user)):
     return JSONResponse(shm_reader.get_latest_slot(limit))
 
-app.mount("/", StaticFiles(directory="../frontend", html=True), name="frontend")
+
+app.mount("/", StaticFiles(directory="/home/ajay/Desktop/SIH/frontend", html=True), name="frontend")
